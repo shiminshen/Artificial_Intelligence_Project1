@@ -2,6 +2,7 @@ import random
 import time
 import multiprocessing
 import numpy as np
+import Queue
 
 class ai_agent():
 	mapinfo = []
@@ -32,7 +33,7 @@ class ai_agent():
 		#-----your ai operation,This code is a random strategy,please design your ai !!-----------------------			
 			self.Get_mapInfo(p_mapinfo)
 			# print self.mapinfo[3]
-			#time.sleep(0.001)	
+			time.sleep(0.05)	
 			
 			# q=0
 			# for i in range(10000000):
@@ -93,35 +94,32 @@ class ai_agent():
             leftPoint = currPositionRect.move(-8, 0)
 
             topValue = self.getAvgCost(topPoint, costMap)
-            bottomValue = self.getAvgCost(bottomPoint, costMap)
             rightValue = self.getAvgCost(rightPoint, costMap)
+            bottomValue = self.getAvgCost(bottomPoint, costMap)
             leftValue = self.getAvgCost(leftPoint, costMap)
             
             # print 'Direction'
             # print currPostionRect
 
-            # print '----------------'
-            # print topValue
-            # print rightValue
-            # print bottomValue
-            # print leftValue
+            print '----------------'
+            print topValue
+            print rightValue
+            print bottomValue
+            print leftValue
 
             return [topValue, rightValue, bottomValue, leftValue]
 
-        def checkBound(self, index):
+        def isOutOfBound(self, index):
             """check the index of position does not exceed the bound of map
 
             :index: TODO
             :returns: TODO
 
             """
-            if index > 416:
-                return 416
-            
-            if index < 0:
-                return 0
+            if index > 390 or index < 0:
+                return 1
 
-            return index
+            return 0
 
         def getAvgCost(self, positionRect, costMap):
             """get average cost in position rectangle
@@ -131,12 +129,17 @@ class ai_agent():
             :returns: TODO
 
             """
-            top    = self.checkBound(positionRect.top)
-            left   = self.checkBound(positionRect.left)
+            top    = positionRect.top
+            left   = positionRect.left
+
             width  = positionRect.width
             height = positionRect.height
 
-            return np.average(costMap[top:top+height, left:left+width])
+            if self.isOutOfBound(top) or self.isOutOfBound(left):
+                return 999
+            else:
+                # return np.average(costMap[top:top+height, left:left+width])
+                return np.amin(costMap[top:top+height, left:left+width])
 
         def heuristicDistance(self, p1, p2):
             """get the distance between to point p1 and p2
@@ -191,6 +194,7 @@ class ai_agent():
             # get the nearest enemy to my tank
             enemy = self.getNearestEnemy(selfInfo, enemiesInfo)
 
+            validDirection = []
             movingDirection = 4
             if enemy:
                 costMatrix = self.heuristicMap(mapMatrix, selfInfo, enemy)
@@ -198,10 +202,13 @@ class ai_agent():
                 minCost = min(directionCost)
                 for index, cost in enumerate(directionCost):
                     if cost == minCost:
-                        movingDirection = index
+                        validDirection.append(index)
                         # break
+                random.shuffle(validDirection)
+            if len(validDirection) > 0:
+                movingDirection = validDirection[0]
 
-            return [movingDirection, random.randint(0,1)]
+            return (movingDirection, 1)
 
             # print 'enemy'
             # print enemy
