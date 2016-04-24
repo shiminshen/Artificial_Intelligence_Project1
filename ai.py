@@ -1,6 +1,8 @@
 import random
 import time
 import multiprocessing
+import numpy as np
+
 class ai_agent():
 	mapinfo = []
 	def __init__(self):
@@ -29,20 +31,204 @@ class ai_agent():
 		while True:
 		#-----your ai operation,This code is a random strategy,please design your ai !!-----------------------			
 			self.Get_mapInfo(p_mapinfo)
-			print self.mapinfo[3]
+			# print self.mapinfo[3]
 			#time.sleep(0.001)	
 			
-			q=0
-			for i in range(10000000):
-				q+=1
+			# q=0
+			# for i in range(10000000):
+			# 	q+=1
 			
-			shoot = random.randint(0,1)
-			move_dir = random.randint(0,4)
+			# shoot = random.randint(0,1)
+			# move_dir = random.randint(0,4)
+
 			#keep_action = 0
 			keep_action = 1
+
+                        mapMatrix = self.convertMap2List(self.mapinfo[2])
+                        move_dir, shoot = self.getStrategy(mapMatrix, self.mapinfo)
+
 			#-----------
 			self.Update_Strategy(c_control,shoot,move_dir,keep_action)
 		#------------------------------------------------------------------------------------------------------
+
+        def heuristicMap(self, envMap, selfTank, enemyTank):
+            """get the heuristic cost map
+
+            :envMap. selfPosition: TODO
+            :enemyPosition: TODO
+            :returns: TODO
+
+            """
+
+            costMap = envMap.copy()
+            # compute heuristic cost into cost map
+            for index, obType in np.ndenumerate(costMap):
+                # convert obstacle to max cost value
+                if obType == 2 or obType == 3 or obType == 1:
+                    costMap[index] = 999
+                    continue
+                # fill heuristic cost into valid path
+                else:
+                    enemyPosition = (enemyTank[0].top, enemyTank[0].left)
+                    costMap[index] = self.heuristicDistance(index, enemyPosition) 
+
+
+            # np.savetxt('map.csv', costMap, fmt='%d', delimiter=',')
+            return costMap
+
+
+            
+        def getMovingCost(self, currPositionRect, costMap):
+            """get cost of all moving directions
+
+            :currPositionRect: TODO
+            :returns: TODO
+
+            """
+
+
+            topPoint = currPositionRect.move(0, -8)
+            bottomPoint = currPositionRect.move(0, 8)
+            rightPoint = currPositionRect.move(8, 0)
+            leftPoint = currPositionRect.move(-8, 0)
+
+            topValue = self.getAvgCost(topPoint, costMap)
+            bottomValue = self.getAvgCost(bottomPoint, costMap)
+            rightValue = self.getAvgCost(rightPoint, costMap)
+            leftValue = self.getAvgCost(leftPoint, costMap)
+            
+            # print 'Direction'
+            # print currPostionRect
+
+            # print '----------------'
+            # print topValue
+            # print rightValue
+            # print bottomValue
+            # print leftValue
+
+            return [topValue, rightValue, bottomValue, leftValue]
+
+        def checkBound(self, index):
+            """check the index of position does not exceed the bound of map
+
+            :index: TODO
+            :returns: TODO
+
+            """
+            if index > 416:
+                return 416
+            
+            if index < 0:
+                return 0
+
+            return index
+
+        def getAvgCost(self, positionRect, costMap):
+            """get average cost in position rectangle
+
+            :positionRect: TODO
+            :costMap: TODO
+            :returns: TODO
+
+            """
+            top    = self.checkBound(positionRect.top)
+            left   = self.checkBound(positionRect.left)
+            width  = positionRect.width
+            height = positionRect.height
+
+            return np.average(costMap[top:top+height, left:left+width])
+
+        def heuristicDistance(self, p1, p2):
+            """get the distance between to point p1 and p2
+
+            :p1: point1
+            :p2: point2
+            :returns: int: distance of two point
+
+            """
+            return abs(p1[0] - p2[0]) + abs(p1[1] - p2[1])
+
+        def getNearestEnemy(self, user, enemies):
+            """get the nearest enemy
+
+            :user: User current position
+            :enemies: All enemies information
+            :returns: The nearest enemy
+
+            """
+            nearestEnemy = None
+            minDist = 416 * 2
+            userPosition = (user[0].top, user[0].left)
+
+            for enemy in enemies:
+
+                enemyPosition = (enemy[0].top, enemy[0].left)
+                # calculate the distance to enemy
+                distance = self.heuristicDistance(userPosition, enemyPosition)
+                # print 'dist: ' + str(distance)
+
+                # update nearest enemy
+                if distance < minDist:
+                    nearestEnemy = enemy
+                    minDist = distance
+
+            return nearestEnemy
+
+
+        def getStrategy(self, mapMatrix, mapInfo):
+            """detemine the strategy about moveing direction and shooting or not
+
+            :mapMatrix: Environment map. Each value is a pixel in the map
+            :mapInfo: All information about map
+            :returns: Array[moving direction, shoot]
+
+            """
+
+            selfInfo    = mapInfo[3][0]
+            bulletsInfo = mapInfo[0]
+            enemiesInfo = mapInfo[1]
+
+            # get the nearest enemy to my tank
+            enemy = self.getNearestEnemy(selfInfo, enemiesInfo)
+
+            movingDirection = 4
+            if enemy:
+                costMatrix = self.heuristicMap(mapMatrix, selfInfo, enemy)
+                directionCost = self.getMovingCost(selfInfo[0], costMatrix)
+                minCost = min(directionCost)
+                for index, cost in enumerate(directionCost):
+                    if cost == minCost:
+                        movingDirection = index
+                        # break
+
+            return [movingDirection, random.randint(0,1)]
+
+            # print 'enemy'
+            # print enemy
+
+        def convertMap2List(self, envInfo):
+            """convert environment of map info to list
+
+            :mapinfo: All information about map
+            :returns: Numpy.array
+
+            """
+            # initialzie map
+            mapMatrix = np.zeros((416, 416), dtype=np.int)
+
+            # fill obstacle into map
+            for block in envInfo:
+                pixelState = [block[0].top, block[0].left, block[1]]
+                topPixel = block[0].top
+                leftPixel = block[0].left
+                # fill nonempty pixel in the map
+                for vOffset in xrange(0, block[0].height):
+                    for hOffset in xrange(0, block[0].width):
+                        mapMatrix[topPixel + vOffset, leftPixel + hOffset] = block[1]
+
+            # np.savetxt('map.csv', mapMatrix, fmt='%d', delimiter=',')
+            return mapMatrix
+
 
 	def Get_mapInfo(self,p_mapinfo):
 		if p_mapinfo.empty()!=True:
