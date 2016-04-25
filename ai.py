@@ -79,18 +79,19 @@ class ai_agent():
 
 
             
-        def getMovingCost(self, currPositionRect, costMap):
+        def getMovingCost(self, selfInfo, costMap):
             """get cost of all moving directions
 
-            :currPositionRect: TODO
+            :selfInfo: TODO
             :returns: TODO
 
             """
 
+            currPositionRect = self.getNextStep(selfInfo[0], selfInfo[1])
 
             topPoint = currPositionRect.move(0, -8)
-            bottomPoint = currPositionRect.move(0, 8)
             rightPoint = currPositionRect.move(8, 0)
+            bottomPoint = currPositionRect.move(0, 8)
             leftPoint = currPositionRect.move(-8, 0)
 
             topValue = self.getAvgCost(topPoint, costMap)
@@ -177,6 +178,24 @@ class ai_agent():
 
             return nearestEnemy
 
+        def getNextStep(self, positionRect, direction):
+            """estimate the next position from current moving direction
+
+            :positionRect: TODO
+            :direction: TODO
+            :returns: TODO
+
+            """
+            if direction == 0:
+                return positionRect.move(0, -12)
+            elif direction == 1:
+                return positionRect.move(12, 0)
+            elif direction == 2:
+                return positionRect.move(0, 12)
+            elif direction == 3:
+                return positionRect.move(-12, 0)
+            else:
+                return positionRect
 
         def getStrategy(self, mapMatrix, mapInfo):
             """detemine the strategy about moveing direction and shooting or not
@@ -198,20 +217,19 @@ class ai_agent():
             movingDirection = 4
             if enemy:
                 costMatrix = self.heuristicMap(mapMatrix, selfInfo, enemy)
-                directionCost = self.getMovingCost(selfInfo[0], costMatrix)
+                directionCost = self.getMovingCost(selfInfo, costMatrix)
+                print 'self direction: ' + str(selfInfo[1])
                 minCost = min(directionCost)
                 for index, cost in enumerate(directionCost):
                     if cost == minCost:
                         validDirection.append(index)
                         # break
                 random.shuffle(validDirection)
+            # random select best step
             if len(validDirection) > 0:
                 movingDirection = validDirection[0]
 
             return (movingDirection, 1)
-
-            # print 'enemy'
-            # print enemy
 
         def convertMap2List(self, envInfo):
             """convert environment of map info to list
