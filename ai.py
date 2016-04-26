@@ -33,7 +33,7 @@ class ai_agent():
 		#-----your ai operation,This code is a random strategy,please design your ai !!-----------------------			
 			self.Get_mapInfo(p_mapinfo)
 			# print self.mapinfo[3]
-			time.sleep(0.1)	
+			time.sleep(0.05)	
 			
 			# q=0
 			# for i in range(10000000):
@@ -88,6 +88,7 @@ class ai_agent():
 
             """
 
+            # currPositionRect = selfInfo[0]
             currPositionRect = self.getNextStep(selfInfo[0], selfInfo[1])
 
             self_x         = currPositionRect.left
@@ -96,12 +97,12 @@ class ai_agent():
             self_height    = currPositionRect.height
             self_direction = selfInfo[1]
 
-            # print currPositionRect
+            print currPositionRect
 
-            if self_y > 370 and (self_direction == 1 or self_direction == 3):
+            if self_y > 345 and (self_direction == 1 or self_direction == 3):
                 print 'not Shoot'
                 return 0
-            if self_x > 192 and self_x < 224 and (self_direction == 2):
+            if self_x > 148 and self_x < 250 and (self_direction == 2):
                 print 'not Shoot'
                 return 0
 
@@ -118,6 +119,7 @@ class ai_agent():
             """
 
             currPositionRect = self.getNextStep(selfInfo[0], selfInfo[1])
+            # currPositionRect = selfInfo[0]
 
             topPoint = currPositionRect.move(0, -8)
             rightPoint = currPositionRect.move(8, 0)
@@ -166,11 +168,19 @@ class ai_agent():
             width  = positionRect.width
             height = positionRect.height
 
+            # width  = positionRect.width / 2
+            # height = positionRect.height / 2
+
             if self.isOutOfBound(top) or self.isOutOfBound(left):
                 return 999
             else:
-                # return np.average(costMap[top:top+height, left:left+width])
-                return np.amin(costMap[top:top+height, left:left+width])
+                frontInfo = costMap[top:top+height, left:left+width]
+                print 'Number of obstacle: ' + str(frontInfo[frontInfo == 999].size)
+                if frontInfo[frontInfo == 999].size > 100:
+                    return 999
+
+                # return np.average(frontInfo)
+                return np.amin(frontInfo)
 
         def heuristicDistance(self, p1, p2):
             """get the distance between to point p1 and p2
@@ -259,6 +269,7 @@ class ai_agent():
             if len(validDirection) > 0:
                 movingDirection = validDirection[0]
 
+            print 'move direction: ' + str(movingDirection)
             return (movingDirection, self.canShoot(selfInfo, mapMatrix))
 
         def convertMap2List(self, envInfo):
