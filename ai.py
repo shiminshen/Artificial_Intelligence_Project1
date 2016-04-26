@@ -33,7 +33,7 @@ class ai_agent():
 		#-----your ai operation,This code is a random strategy,please design your ai !!-----------------------			
 			self.Get_mapInfo(p_mapinfo)
 			# print self.mapinfo[3]
-			time.sleep(0.05)	
+			time.sleep(0.1)	
 			
 			# q=0
 			# for i in range(10000000):
@@ -44,6 +44,8 @@ class ai_agent():
 
 			#keep_action = 0
 			keep_action = 1
+                        if not self.canShoot(self.mapinfo[3][0], ''):
+                            self.Update_Strategy(c_control, 0, 4, keep_action)
 
                         mapMatrix = self.convertMap2List(self.mapinfo[2])
                         move_dir, shoot = self.getStrategy(mapMatrix, self.mapinfo)
@@ -77,6 +79,34 @@ class ai_agent():
             # np.savetxt('map.csv', costMap, fmt='%d', delimiter=',')
             return costMap
 
+        def canShoot(self, selfInfo, mapMatrix):
+            """current information of self tank
+
+            :selfInfo: TODO
+            :mapMatrix: TODO
+            :returns: TODO
+
+            """
+
+            currPositionRect = self.getNextStep(selfInfo[0], selfInfo[1])
+
+            self_x         = currPositionRect.left
+            self_y         = currPositionRect.top
+            self_width     = currPositionRect.width
+            self_height    = currPositionRect.height
+            self_direction = selfInfo[1]
+
+            # print currPositionRect
+
+            if self_y > 370 and (self_direction == 1 or self_direction == 3):
+                print 'not Shoot'
+                return 0
+            if self_x > 192 and self_x < 224 and (self_direction == 2):
+                print 'not Shoot'
+                return 0
+
+            return 1
+            castle = [192, 384, 32, 32]
 
             
         def getMovingCost(self, selfInfo, costMap):
@@ -229,7 +259,7 @@ class ai_agent():
             if len(validDirection) > 0:
                 movingDirection = validDirection[0]
 
-            return (movingDirection, 1)
+            return (movingDirection, self.canShoot(selfInfo, mapMatrix))
 
         def convertMap2List(self, envInfo):
             """convert environment of map info to list
