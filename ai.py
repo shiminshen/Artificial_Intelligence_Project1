@@ -32,7 +32,7 @@ class ai_agent():
 		while True:
 		#-----your ai operation,This code is a random strategy,please design your ai !!-----------------------			
 			self.Get_mapInfo(p_mapinfo)
-			# print self.mapinfo[3]
+			print self.mapinfo[3]
 			time.sleep(0.05)	
 			
 			# q=0
@@ -88,16 +88,14 @@ class ai_agent():
 
             """
 
-            # currPositionRect = selfInfo[0]
-            currPositionRect = self.getNextStep(selfInfo[0], selfInfo[1])
+            currPositionRect = selfInfo[0]
+            # currPositionRect = self.getNextStep(selfInfo[0], selfInfo[1])
 
             self_x         = currPositionRect.left
             self_y         = currPositionRect.top
             self_width     = currPositionRect.width
             self_height    = currPositionRect.height
             self_direction = selfInfo[1]
-
-            print currPositionRect
 
             if self_y > 345 and (self_direction == 1 or self_direction == 3):
                 print 'not Shoot'
@@ -118,8 +116,8 @@ class ai_agent():
 
             """
 
-            currPositionRect = self.getNextStep(selfInfo[0], selfInfo[1])
-            # currPositionRect = selfInfo[0]
+            # currPositionRect = self.getNextStep(selfInfo[0], selfInfo[1])
+            currPositionRect = selfInfo[0]
 
             topPoint = currPositionRect.move(0, -8)
             rightPoint = currPositionRect.move(8, 0)
