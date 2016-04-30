@@ -54,12 +54,13 @@ class ai_agent():
 			self.Update_Strategy(c_control,shoot,move_dir,keep_action)
 		#------------------------------------------------------------------------------------------------------
 
-        def heuristicMap(self, envMap, selfTank, enemyTank, bullets):
+        def heuristicMap(self, envMap, selfTank, enemyTank, bullets, enemies):
             """get the heuristic cost map
 
             :envMap. selfPosition: TODO
             :enemyPosition: TODO
             :bullets: TODO
+            :enemies: TODO
             :returns: TODO
 
             """
@@ -77,7 +78,7 @@ class ai_agent():
                     costMap[index] = self.heuristicDistance(index, enemyPosition) 
                     # costMap[enemyPosition] += 50
 
-            print bullets
+            # print bullets
             # add bullets penalty
             for bullet in bullets:
                 dangerPoint = bullet[0].move(-8, -8)
@@ -85,12 +86,12 @@ class ai_agent():
                 if self.isOutOfBound(dangerPoint.top) or self.isOutOfBound(dangerPoint.left):
                     dangerPoint = bullet[0]
 
-                dangerPoint.width = 100
-                dangerPoint.height = 100
+                dangerPoint.width *= 5 
+                dangerPoint.height *= 5 
 
                 direction = bullet[1]
 
-                self.addBulletPenalty(costMap, dangerPoint, direction, 300)
+                self.addPenalty(costMap, dangerPoint, direction, 1000)
 
 
             for bullet in bullets:
@@ -99,20 +100,42 @@ class ai_agent():
                 if self.isOutOfBound(dangerPoint.top) or self.isOutOfBound(dangerPoint.left):
                     dangerPoint = bullet[0]
 
-                dangerPoint.width = 200
-                dangerPoint.height = 200
+                dangerPoint.width *= 10
+                dangerPoint.height *= 10
 
                 direction = bullet[1]
 
-                self.addBulletPenalty(costMap, dangerPoint, direction, 300)
+                self.addPenalty(costMap, dangerPoint, direction, 300)
+
+            for enemy in enemies:
+                dangerPoint = enemy[0]
+                # check the bound of map
+                if self.isOutOfBound(dangerPoint.top) or self.isOutOfBound(dangerPoint.left):
+                    dangerPoint = enemy[0]
+
+                direction = enemy[1]
+
+                self.addPenalty(costMap, dangerPoint, direction, 200)
+
+            for enemy in enemies:
+                dangerPoint = enemy[0].move(enemy[0].width, enemy[0].height)
+                # check the bound of map
+                if self.isOutOfBound(dangerPoint.top) or self.isOutOfBound(dangerPoint.left):
+                    dangerPoint = enemy[0]
+
+                dangerPoint.width *= 3
+                dangerPoint.height *= 3
+
+                direction = enemy[1]
+
+                self.addPenalty(costMap, dangerPoint, direction, 100)
 
 
 
             # np.savetxt('map.csv', costMap, fmt='%d', delimiter=',')
-            print 'Map saved'
             return costMap
 
-        def addBulletPenalty(self, mapMatrix, bulletRect, direction, penalty):
+        def addPenalty(self, mapMatrix, bulletRect, direction, penalty):
             """add the penalty on the trajectory of bullet
 
             :mapMatrix: TODO
@@ -168,7 +191,9 @@ class ai_agent():
             self_height    = currPositionRect.height
             self_direction = selfInfo[1]
 
-            if self_y > 345 and (self_direction == 1 or self_direction == 3):
+            castle = [192, 384, 32, 32]
+            # if self_y > 345 and (self_direction == 1 or self_direction == 3):
+            if self_y > 345:
                 print 'not Shoot'
                 return 0
             if self_x > 148 and self_x < 250 and (self_direction == 2):
@@ -176,7 +201,6 @@ class ai_agent():
                 return 0
 
             return 1
-            castle = [192, 384, 32, 32]
 
             
         def getAllDirectionCost(self, selfInfo, costMap):
@@ -244,7 +268,7 @@ class ai_agent():
                 return 999
             else:
                 frontInfo = costMap[top:top+height, left:left+width]
-                # print 'Number of obstacle: ' + str(frontInfo[frontInfo == 999].size)
+                print 'Number of obstacle: ' + str(frontInfo[frontInfo == 999].size)
                 if frontInfo[frontInfo == 999].size > 100:
                     return 999
 
@@ -272,12 +296,15 @@ class ai_agent():
             nearestEnemy = None
             minDist = 416 * 2
             userPosition = (user[0].top, user[0].left)
+            castle = [192, 384, 32, 32]
+            castlePosition = (384, 192)
 
             for enemy in enemies:
 
                 enemyPosition = (enemy[0].top, enemy[0].left)
                 # calculate the distance to enemy
                 distance = self.heuristicDistance(userPosition, enemyPosition)
+                # distance = 0.2 * self.heuristicDistance(userPosition, enemyPosition) + 0.8 * self.heuristicDistance(enemyPosition, castlePosition)
                 # print 'dist: ' + str(distance)
 
                 # update nearest enemy
@@ -320,13 +347,14 @@ class ai_agent():
             bulletsInfo = mapInfo[0]
             enemiesInfo = mapInfo[1]
 
+            print selfInfo
             # get the nearest enemy to my tank
             enemy = self.getNearestEnemy(selfInfo, enemiesInfo)
 
             validDirection = []
             movingDirection = 4
             if enemy:
-                costMatrix = self.heuristicMap(mapMatrix, selfInfo, enemy, bulletsInfo)
+                costMatrix = self.heuristicMap(mapMatrix, selfInfo, enemy, bulletsInfo, enemiesInfo)
                 directionCost = self.getAllDirectionCost(selfInfo, costMatrix)
                 print 'self direction: ' + str(selfInfo[1])
                 minCost = min(directionCost)
@@ -335,6 +363,7 @@ class ai_agent():
                         validDirection.append(index)
                         # break
                 random.shuffle(validDirection)
+                print validDirection
             # random select best step
             if len(validDirection) > 0:
                 movingDirection = validDirection[0]
