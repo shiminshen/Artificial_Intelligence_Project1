@@ -32,8 +32,8 @@ class ai_agent():
 		while True:
 		#-----your ai operation,This code is a random strategy,please design your ai !!-----------------------			
 			self.Get_mapInfo(p_mapinfo)
-			print self.mapinfo[3]
-			time.sleep(0.05)	
+			# print self.mapinfo[3]
+			# time.sleep(0.05)	
 			
 			# q=0
 			# for i in range(10000000):
@@ -54,11 +54,12 @@ class ai_agent():
 			self.Update_Strategy(c_control,shoot,move_dir,keep_action)
 		#------------------------------------------------------------------------------------------------------
 
-        def heuristicMap(self, envMap, selfTank, enemyTank):
+        def heuristicMap(self, envMap, selfTank, enemyTank, bullets):
             """get the heuristic cost map
 
             :envMap. selfPosition: TODO
             :enemyPosition: TODO
+            :bullets: TODO
             :returns: TODO
 
             """
@@ -74,10 +75,80 @@ class ai_agent():
                 else:
                     enemyPosition = (enemyTank[0].top, enemyTank[0].left)
                     costMap[index] = self.heuristicDistance(index, enemyPosition) 
+                    # costMap[enemyPosition] += 50
+
+            print bullets
+            # add bullets penalty
+            for bullet in bullets:
+                dangerPoint = bullet[0].move(-8, -8)
+                # check the bound of map
+                if self.isOutOfBound(dangerPoint.top) or self.isOutOfBound(dangerPoint.left):
+                    dangerPoint = bullet[0]
+
+                dangerPoint.width = 100
+                dangerPoint.height = 100
+
+                direction = bullet[1]
+
+                self.addBulletPenalty(costMap, dangerPoint, direction, 300)
+
+
+            for bullet in bullets:
+                dangerPoint = bullet[0].move(-16, -16)
+                # check the bound of map
+                if self.isOutOfBound(dangerPoint.top) or self.isOutOfBound(dangerPoint.left):
+                    dangerPoint = bullet[0]
+
+                dangerPoint.width = 200
+                dangerPoint.height = 200
+
+                direction = bullet[1]
+
+                self.addBulletPenalty(costMap, dangerPoint, direction, 300)
+
 
 
             # np.savetxt('map.csv', costMap, fmt='%d', delimiter=',')
+            print 'Map saved'
             return costMap
+
+        def addBulletPenalty(self, mapMatrix, bulletRect, direction, penalty):
+            """add the penalty on the trajectory of bullet
+
+            :mapMatrix: TODO
+            :bulletRect: TODO
+            :direction: TODO
+            :penalty: TODO
+            :returns: TODO
+
+            """
+
+            bulletTop    = bulletRect.top
+            bulletLeft   = bulletRect.left
+            bulletWidth  = bulletRect.width
+            bulletHeight = bulletRect.height
+
+            print 'bullet tragecotry----------------'
+            if direction == 0:
+                # move up
+                mapMatrix[:bulletTop+bulletHeight, bulletLeft: bulletLeft+bulletWidth] += penalty
+                # print '0:' + str(bulletTop) + ' ' + str(bulletLeft) + ':' + str(bulletLeft+bulletWidth)
+            elif direction == 1:
+                # move right
+                mapMatrix[bulletTop:bulletTop+bulletHeight, bulletLeft+bulletWidth:] += penalty
+                # print str(bulletTop) + ':' + str(bulletTop+bulletHeight) + ' ' + str(bulletLeft+bulletWidth) + ':'
+            elif direction == 2:
+                # move down
+                mapMatrix[bulletTop+bulletHeight:, bulletLeft: bulletLeft+bulletWidth] += penalty
+                # print str(bulletTop) + ':' + ' ' + str(bulletLeft) + ':' + str(bulletLeft+bulletWidth)
+            elif direction == 3:
+                # move left
+                mapMatrix[bulletTop:bulletTop+bulletHeight, :bulletLeft+bulletWidth] += penalty
+                # print str(bulletTop) + ':' + str(bulletTop+bulletHeight) + ' :' + str(bulletLeft+bulletWidth)
+            else:
+                pass
+            return mapMatrix
+            
 
         def canShoot(self, selfInfo, mapMatrix):
             """current information of self tank
@@ -108,7 +179,7 @@ class ai_agent():
             castle = [192, 384, 32, 32]
 
             
-        def getMovingCost(self, selfInfo, costMap):
+        def getAllDirectionCost(self, selfInfo, costMap):
             """get cost of all moving directions
 
             :selfInfo: TODO
@@ -173,7 +244,7 @@ class ai_agent():
                 return 999
             else:
                 frontInfo = costMap[top:top+height, left:left+width]
-                print 'Number of obstacle: ' + str(frontInfo[frontInfo == 999].size)
+                # print 'Number of obstacle: ' + str(frontInfo[frontInfo == 999].size)
                 if frontInfo[frontInfo == 999].size > 100:
                     return 999
 
@@ -224,6 +295,7 @@ class ai_agent():
             :returns: TODO
 
             """
+
             if direction == 0:
                 return positionRect.move(0, -12)
             elif direction == 1:
@@ -254,12 +326,12 @@ class ai_agent():
             validDirection = []
             movingDirection = 4
             if enemy:
-                costMatrix = self.heuristicMap(mapMatrix, selfInfo, enemy)
-                directionCost = self.getMovingCost(selfInfo, costMatrix)
+                costMatrix = self.heuristicMap(mapMatrix, selfInfo, enemy, bulletsInfo)
+                directionCost = self.getAllDirectionCost(selfInfo, costMatrix)
                 print 'self direction: ' + str(selfInfo[1])
                 minCost = min(directionCost)
                 for index, cost in enumerate(directionCost):
-                    if cost == minCost:
+                    if cost == minCost or cost < 30:
                         validDirection.append(index)
                         # break
                 random.shuffle(validDirection)
@@ -267,7 +339,7 @@ class ai_agent():
             if len(validDirection) > 0:
                 movingDirection = validDirection[0]
 
-            print 'move direction: ' + str(movingDirection)
+            # print 'move direction: ' + str(movingDirection)
             return (movingDirection, self.canShoot(selfInfo, mapMatrix))
 
         def convertMap2List(self, envInfo):
