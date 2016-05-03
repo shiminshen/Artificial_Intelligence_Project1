@@ -3,6 +3,7 @@ import time
 import multiprocessing
 import numpy as np
 import Queue
+import heapq
 
 class ai_agent():
 	mapinfo = []
@@ -70,7 +71,7 @@ class ai_agent():
             for index, obType in np.ndenumerate(costMap):
                 # convert obstacle to max cost value
                 if obType == 2 or obType == 3 or obType == 1:
-                    costMap[index] = 999
+                    costMap[index] = 9999
                     continue
                 # fill heuristic cost into valid path
                 else:
@@ -86,27 +87,29 @@ class ai_agent():
                 if self.isOutOfBound(dangerPoint.top) or self.isOutOfBound(dangerPoint.left):
                     dangerPoint = bullet[0]
 
-                dangerPoint.width *= 5 
-                dangerPoint.height *= 5 
+                dangerPoint.width *= 10 
+                dangerPoint.height *= 10 
 
                 direction = bullet[1]
 
-                self.addPenalty(costMap, dangerPoint, direction, 1000)
+                self.addPenalty(costMap, dangerPoint, direction, 500)
 
 
+            # add bullets warning penalty
             for bullet in bullets:
                 dangerPoint = bullet[0].move(-16, -16)
                 # check the bound of map
                 if self.isOutOfBound(dangerPoint.top) or self.isOutOfBound(dangerPoint.left):
                     dangerPoint = bullet[0]
 
-                dangerPoint.width *= 10
-                dangerPoint.height *= 10
+                dangerPoint.width *= 20
+                dangerPoint.height *= 20
 
                 direction = bullet[1]
 
                 self.addPenalty(costMap, dangerPoint, direction, 300)
 
+            # add enemies penalty
             for enemy in enemies:
                 dangerPoint = enemy[0]
                 # check the bound of map
@@ -115,8 +118,9 @@ class ai_agent():
 
                 direction = enemy[1]
 
-                self.addPenalty(costMap, dangerPoint, direction, 200)
+                self.addPenalty(costMap, dangerPoint, direction, 300)
 
+            # add enemies warning penalty
             for enemy in enemies:
                 dangerPoint = enemy[0].move(enemy[0].width, enemy[0].height)
                 # check the bound of map
@@ -151,7 +155,7 @@ class ai_agent():
             bulletWidth  = bulletRect.width
             bulletHeight = bulletRect.height
 
-            print 'bullet tragecotry----------------'
+            # print 'bullet tragecotry----------------'
             if direction == 0:
                 # move up
                 mapMatrix[:bulletTop+bulletHeight, bulletLeft: bulletLeft+bulletWidth] += penalty
@@ -183,7 +187,7 @@ class ai_agent():
             """
 
             currPositionRect = selfInfo[0]
-            # currPositionRect = self.getNextStep(selfInfo[0], selfInfo[1])
+            # currPositionRect = self.getNextStep(selfInfo[0], selfInfo[1], 12)
 
             self_x         = currPositionRect.left
             self_y         = currPositionRect.top
@@ -194,16 +198,17 @@ class ai_agent():
             castle = [192, 384, 32, 32]
             # if self_y > 345 and (self_direction == 1 or self_direction == 3):
             if self_y > 345:
-                print 'not Shoot'
+                # print 'not Shoot'
                 return 0
-            if self_x > 148 and self_x < 250 and (self_direction == 2):
+            # if self_x > 148 and self_x < 250 and (self_direction == 2):
+            if self_x > 148 and self_x < 250:
                 print 'not Shoot'
                 return 0
 
             return 1
 
             
-        def getAllDirectionCost(self, selfInfo, costMap):
+        def getAllDirectionCost(self, selfInfo, costMap, step = 8):
             """get cost of all moving directions
 
             :selfInfo: TODO
@@ -211,13 +216,14 @@ class ai_agent():
 
             """
 
-            # currPositionRect = self.getNextStep(selfInfo[0], selfInfo[1])
-            currPositionRect = selfInfo[0]
+            # currPositionRect = self.getNextStep(selfInfo[0], selfInfo[1], 12)
+            # currPositionRect = selfInfo[0]
+            currPositionRect = selfInfo
 
-            topPoint = currPositionRect.move(0, -8)
-            rightPoint = currPositionRect.move(8, 0)
-            bottomPoint = currPositionRect.move(0, 8)
-            leftPoint = currPositionRect.move(-8, 0)
+            topPoint = currPositionRect.move(0, -step)
+            rightPoint = currPositionRect.move(step, 0)
+            bottomPoint = currPositionRect.move(0, step)
+            leftPoint = currPositionRect.move(-step, 0)
 
             topValue = self.getAvgCost(topPoint, costMap)
             rightValue = self.getAvgCost(rightPoint, costMap)
@@ -265,12 +271,12 @@ class ai_agent():
             # height = positionRect.height / 2
 
             if self.isOutOfBound(top) or self.isOutOfBound(left):
-                return 999
+                return 9999
             else:
                 frontInfo = costMap[top:top+height, left:left+width]
-                print 'Number of obstacle: ' + str(frontInfo[frontInfo == 999].size)
-                if frontInfo[frontInfo == 999].size > 100:
-                    return 999
+                # print 'Number of obstacle: ' + str(frontInfo[frontInfo == 9999].size)
+                if frontInfo[frontInfo == 9999].size > 100:
+                    return 9999
 
                 # return np.average(frontInfo)
                 return np.amin(frontInfo)
@@ -314,7 +320,7 @@ class ai_agent():
 
             return nearestEnemy
 
-        def getNextStep(self, positionRect, direction):
+        def getNextStep(self, positionRect, direction, step = 8):
             """estimate the next position from current moving direction
 
             :positionRect: TODO
@@ -324,13 +330,13 @@ class ai_agent():
             """
 
             if direction == 0:
-                return positionRect.move(0, -12)
+                return positionRect.move(0, -step)
             elif direction == 1:
-                return positionRect.move(12, 0)
+                return positionRect.move(step, 0)
             elif direction == 2:
-                return positionRect.move(0, 12)
+                return positionRect.move(0, step)
             elif direction == 3:
-                return positionRect.move(-12, 0)
+                return positionRect.move(-step, 0)
             else:
                 return positionRect
 
@@ -355,7 +361,7 @@ class ai_agent():
             movingDirection = 4
             if enemy:
                 costMatrix = self.heuristicMap(mapMatrix, selfInfo, enemy, bulletsInfo, enemiesInfo)
-                directionCost = self.getAllDirectionCost(selfInfo, costMatrix)
+                directionCost = self.getAllDirectionCost(selfInfo[0], costMatrix, 8)
                 print 'self direction: ' + str(selfInfo[1])
                 minCost = min(directionCost)
                 for index, cost in enumerate(directionCost):
@@ -364,6 +370,7 @@ class ai_agent():
                         # break
                 random.shuffle(validDirection)
                 print validDirection
+                self.AStar(selfInfo[0], enemy[0], costMatrix)
             # random select best step
             if len(validDirection) > 0:
                 movingDirection = validDirection[0]
@@ -394,6 +401,63 @@ class ai_agent():
             # np.savetxt('map.csv', mapMatrix, fmt='%d', delimiter=',')
             return mapMatrix
 
+        def AStar(self, startRect, enemyRect, costMap):
+            """compute shortest path by A star algorithm
+
+            :startRect: TODO
+            :enemyRect: TODO
+            :costMap: TODO
+            :returns: TODO
+
+            """
+
+            # initialize the heap
+            openSet = []
+            heapq.heapify(openSet)
+            closedSet = set()
+            # heapq.heappush(openSet, (costMap[startRect.top, startRect.left], startRect))
+            startNode = Node(startRect, costMap[startRect.top, startRect.left])
+            heapq.heappush(openSet, (startNode.heuristicCost, startNode))
+
+            while len(openSet) > 0:
+                # pop the lowest cost
+                currNode = heapq.heappop(openSet)[1]
+                closedSet.add(currNode)
+                print 'pop: '
+                print currNode.rect
+                print len(closedSet[0])
+
+                # print 'node-----------------'
+                # print currNode.rect
+                # print 'enemy----------------'
+                # print enemyRect
+                # print 'heuristic: ' + str(currNode.heuristicCost)
+
+                # return path if reach the goal
+                # if currNode.rect == enemyRect:
+                if currNode.rect.top == enemyRect.top and currNode.left == enemyRect.left:
+                    print 'found'
+                    return
+
+                # get cost of all directions
+                allDirectionCost = self.getAllDirectionCost(currNode.rect, costMap, 10)
+                
+                for index, cost in enumerate(allDirectionCost):
+                    nextNode = Node(self.getNextStep(currNode.rect, index, 10), cost)
+                    if nextNode in closedSet:
+                        continue
+
+                    if nextNode.heuristicCost < currNode.heuristicCost:
+                        print 'move to '
+                        print nextNode.rect
+                        nextNode.parent = currNode
+                        heapq.heappush(openSet, (nextNode.heuristicCost, nextNode))
+
+                    if nextNode not in openSet:
+                        heapq.heappush(openSet, (nextNode.heuristicCost, nextNode))
+                    
+                # break
+                        
 
 	def Get_mapInfo(self,p_mapinfo):
 		if p_mapinfo.empty()!=True:
@@ -409,3 +473,10 @@ class ai_agent():
 		else:
 			return False
 
+class Node(object):
+    """abstrct class for recording a star result"""
+    def __init__(self, rect, heuristicCost):
+        super(Node, self).__init__()
+        self.rect, self.heuristicCost = rect, heuristicCost
+        self.parent = None
+        
