@@ -159,19 +159,15 @@ class ai_agent():
             if direction == 0:
                 # move up
                 mapMatrix[:bulletTop+bulletHeight, bulletLeft: bulletLeft+bulletWidth] += penalty
-                # print '0:' + str(bulletTop) + ' ' + str(bulletLeft) + ':' + str(bulletLeft+bulletWidth)
             elif direction == 1:
                 # move right
                 mapMatrix[bulletTop:bulletTop+bulletHeight, bulletLeft+bulletWidth:] += penalty
-                # print str(bulletTop) + ':' + str(bulletTop+bulletHeight) + ' ' + str(bulletLeft+bulletWidth) + ':'
             elif direction == 2:
                 # move down
                 mapMatrix[bulletTop+bulletHeight:, bulletLeft: bulletLeft+bulletWidth] += penalty
-                # print str(bulletTop) + ':' + ' ' + str(bulletLeft) + ':' + str(bulletLeft+bulletWidth)
             elif direction == 3:
                 # move left
                 mapMatrix[bulletTop:bulletTop+bulletHeight, :bulletLeft+bulletWidth] += penalty
-                # print str(bulletTop) + ':' + str(bulletTop+bulletHeight) + ' :' + str(bulletLeft+bulletWidth)
             else:
                 pass
             return mapMatrix
@@ -196,12 +192,12 @@ class ai_agent():
             self_direction = selfInfo[1]
 
             castle = [192, 384, 32, 32]
-            # if self_y > 345 and (self_direction == 1 or self_direction == 3):
-            if self_y > 345:
+            if self_y > 345 and (self_direction == 1 or self_direction == 3):
+            # if self_y > 345:
                 # print 'not Shoot'
                 return 0
-            # if self_x > 148 and self_x < 250 and (self_direction == 2):
-            if self_x > 148 and self_x < 250:
+            if self_x > 148 and self_x < 250 and (self_direction == 2):
+            # if self_x > 148 and self_x < 250:
                 # print 'not Shoot'
                 return 0
 
@@ -267,8 +263,6 @@ class ai_agent():
             width  = positionRect.width
             height = positionRect.height
 
-            # width  = positionRect.width / 2
-            # height = positionRect.height / 2
 
             if self.isOutOfBound(top) or self.isOutOfBound(left):
                 return 9999
@@ -310,8 +304,6 @@ class ai_agent():
                 enemyPosition = (enemy[0].top, enemy[0].left)
                 # calculate the distance to enemy
                 distance = self.heuristicDistance(userPosition, enemyPosition)
-                # distance = 0.2 * self.heuristicDistance(userPosition, enemyPosition) + 0.8 * self.heuristicDistance(enemyPosition, castlePosition)
-                # print 'dist: ' + str(distance)
 
                 # update nearest enemy
                 if distance < minDist:
