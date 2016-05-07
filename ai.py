@@ -79,35 +79,35 @@ class ai_agent():
                     costMap[index] = self.heuristicDistance(index, enemyPosition) 
                     # costMap[enemyPosition] += 50
 
-            # # print bullets
-            # # add bullets penalty
-            # for bullet in bullets:
-            #     dangerPoint = bullet[0].move(-8, -8)
-            #     # check the bound of map
-            #     if self.isOutOfBound(dangerPoint.top) or self.isOutOfBound(dangerPoint.left):
-            #         dangerPoint = bullet[0]
-            #
-            #     dangerPoint.width *= 10 
-            #     dangerPoint.height *= 10 
-            #
-            #     direction = bullet[1]
-            #
-            #     self.addPenalty(costMap, dangerPoint, direction, 500)
-            #
-            #
-            # # add bullets warning penalty
-            # for bullet in bullets:
-            #     dangerPoint = bullet[0].move(-16, -16)
-            #     # check the bound of map
-            #     if self.isOutOfBound(dangerPoint.top) or self.isOutOfBound(dangerPoint.left):
-            #         dangerPoint = bullet[0]
-            #
-            #     dangerPoint.width *= 20
-            #     dangerPoint.height *= 20
-            #
-            #     direction = bullet[1]
-            #
-            #     self.addPenalty(costMap, dangerPoint, direction, 300)
+            # print bullets
+            # add bullets penalty
+            for bullet in bullets:
+                dangerPoint = bullet[0].move(-8, -8)
+                # check the bound of map
+                if self.isOutOfBound(dangerPoint.top) or self.isOutOfBound(dangerPoint.left):
+                    dangerPoint = bullet[0]
+
+                dangerPoint.width *= 10 
+                dangerPoint.height *= 10 
+
+                direction = bullet[1]
+
+                self.addPenalty(costMap, dangerPoint, direction, 9999)
+
+
+            # add bullets warning penalty
+            for bullet in bullets:
+                dangerPoint = bullet[0].move(-16, -16)
+                # check the bound of map
+                if self.isOutOfBound(dangerPoint.top) or self.isOutOfBound(dangerPoint.left):
+                    dangerPoint = bullet[0]
+
+                dangerPoint.width *= 20
+                dangerPoint.height *= 20
+
+                direction = bullet[1]
+
+                self.addPenalty(costMap, dangerPoint, direction, 1000)
             #
             # # add enemies penalty
             # for enemy in enemies:
@@ -133,10 +133,16 @@ class ai_agent():
             #     direction = enemy[1]
             #
             #     self.addPenalty(costMap, dangerPoint, direction, 100)
+                
+            topPixel = enemyTank[0].top
+            leftPixel = enemyTank[0].left
+            for vOffset in xrange(0, enemyTank[0].height):
+                for hOffset in xrange(0, enemyTank[0].width):
+                    costMap[topPixel + vOffset, leftPixel + hOffset] = self.heuristicDistance(index, enemyPosition) 
 
 
 
-            np.savetxt('map.csv', costMap, fmt='%d', delimiter=',')
+            # np.savetxt('map.csv', costMap, fmt='%d', delimiter=',')
             return costMap
 
         def addPenalty(self, mapMatrix, bulletRect, direction, penalty):
@@ -192,7 +198,7 @@ class ai_agent():
             self_direction = selfInfo[1]
 
             castle = [192, 384, 32, 32]
-            if self_y > 345 and (self_direction == 1 or self_direction == 3):
+            if self_y > 345 and ((self_direction == 1 and self_x < 148) or (self_direction == 3 and self_x > 250)):
             # if self_y > 345:
                 print 'not Shoot'
                 return 0
@@ -219,11 +225,13 @@ class ai_agent():
             if self.isOutOfBound(currPositionRect.top) or self.isOutOfBound(currPositionRect.left):
                 return []
 
+            # get all direction Rect
             topPoint = currPositionRect.move(0, -step)
             rightPoint = currPositionRect.move(step, 0)
             bottomPoint = currPositionRect.move(0, step)
             leftPoint = currPositionRect.move(-step, 0)
 
+            # get cost of all directions
             topValue = self.getAvgCost(topPoint, costMap)
             rightValue = self.getAvgCost(rightPoint, costMap)
             bottomValue = self.getAvgCost(bottomPoint, costMap)
@@ -373,20 +381,10 @@ class ai_agent():
             validDirection = []
             movingDirection = 4
             if enemy:
-                costMatrix = self.heuristicMap(mapMatrix, selfInfo, enemy, bulletsInfo, enemiesInfo)
-                '''
-                directionCost = self.getAllDirectionCost(selfInfo[0], costMatrix, 8)
-                print 'self direction: ' + str(selfInfo[1])
-                minCost = min(directionCost)
-                for index, cost in enumerate(directionCost):
-                    if cost == minCost or cost < 30:
-                        validDirection.append(index)
-                        # break
-                random.shuffle(validDirection)
-                print validDirection
-                '''
 
-                movingDirection = self.AStar(selfInfo[0], enemy[0], costMatrix)
+                costMatrix = self.heuristicMap(mapMatrix, selfInfo, enemy, bulletsInfo, enemiesInfo)
+                movingDirection = self.AStar(selfInfo, enemy[0], costMatrix)
+
             # # random select best step
             # if len(validDirection) > 0:
             #     movingDirection = validDirection[0]
@@ -426,13 +424,11 @@ class ai_agent():
 
             """
 
-            print '---------------'
-            # if the parent of current node is not the next node of start node, trace back
-
             try:
-                
+
+                # if the parent of current node is not the next node of start node, trace back
                 while destNode.parent.parent != None:
-                    print str(destNode.rect) + ': ' +  str(self.getAllDirectionCost(destNode.rect, costMap, 13, False))
+                    # print str(destNode.rect) + ': ' +  str(self.getAllDirectionCost(destNode.rect, costMap, 13, False))
                     destNode = destNode.parent
 
                 nextRect = destNode.rect
@@ -458,10 +454,10 @@ class ai_agent():
                 
 
 
-        def AStar(self, startRect, enemyRect, costMap):
+        def AStar(self, startInfo, enemyRect, costMap):
             """compute shortest path by A star algorithm
 
-            :startRect: TODO
+            :startInfo: TODO
             :enemyRect: TODO
             :costMap: TODO
             :returns: TODO
@@ -469,6 +465,15 @@ class ai_agent():
             """
 
             costMap = costMap.copy()
+
+            # get next step to be start Rect if available
+            startDirectionCost = allDirectionCost = self.getAllDirectionCost(startInfo[0], costMap, 8)
+            startRect = startInfo[0] if startDirectionCost[startInfo[1]] > 9000 else self.getNextStep(startInfo[0], startInfo[1], 8)
+            # check the position of Rect is not out of bound
+            startRect.top = self.getValidValue(startRect.top)
+            startRect.left = self.getValidValue(startRect.left)
+
+            print startRect
 
             print 'enemy-------------------'
             print enemyRect
@@ -487,11 +492,10 @@ class ai_agent():
                 closedSet.append(currNode)
 
                 currDistance = self.heuristicDistance([currNode.rect.top, currNode.rect.left], [enemyRect.top, enemyRect.left])
-                step = 8 if self.heuristicDistance([currNode.rect.top, currNode.rect.left], [enemyRect.top, enemyRect.left]) > 26 else 1
+                step = 16 if self.heuristicDistance([currNode.rect.top, currNode.rect.left], [enemyRect.top, enemyRect.left]) > 64 else 1
 
                 # return path if reach the goal
-                # if currNode.rect.top == enemyRect.top and currNode.rect.left == enemyRect.left:
-                if currDistance < 32:
+                if currDistance < 64:
                     direction = self.getNextDirection(currNode, costMap)
                     print 'direction: ' + str(direction)
                     return direction
@@ -503,7 +507,8 @@ class ai_agent():
                 for index, cost in enumerate(allDirectionCost):
                     nextNode = Node(self.getNextStep(currNode.rect, index, step), cost)
 
-                    if cost > 9000:
+                    # ignore danger path
+                    if cost > 5000:
                         continue
 
                     # ignore closed node
