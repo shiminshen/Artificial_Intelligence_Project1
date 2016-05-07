@@ -107,38 +107,45 @@ class ai_agent():
 
                 direction = bullet[1]
 
-                self.addPenalty(costMap, dangerPoint, direction, 1000)
-            #
-            # # add enemies penalty
-            # for enemy in enemies:
-            #     dangerPoint = enemy[0]
-            #     # check the bound of map
-            #     if self.isOutOfBound(dangerPoint.top) or self.isOutOfBound(dangerPoint.left):
-            #         dangerPoint = enemy[0]
-            #
-            #     direction = enemy[1]
-            #
-            #     self.addPenalty(costMap, dangerPoint, direction, 300)
-            #
-            # # add enemies warning penalty
-            # for enemy in enemies:
-            #     dangerPoint = enemy[0].move(enemy[0].width, enemy[0].height)
-            #     # check the bound of map
-            #     if self.isOutOfBound(dangerPoint.top) or self.isOutOfBound(dangerPoint.left):
-            #         dangerPoint = enemy[0]
-            #
-            #     dangerPoint.width *= 3
-            #     dangerPoint.height *= 3
-            #
-            #     direction = enemy[1]
-            #
-            #     self.addPenalty(costMap, dangerPoint, direction, 100)
+                self.addPenalty(costMap, dangerPoint, direction, 2000)
+
+            # add enemies penalty
+            for enemy in enemies:
+                dangerPoint = enemy[0]
+                # check the bound of map
+                if self.isOutOfBound(dangerPoint.top) or self.isOutOfBound(dangerPoint.left):
+                    dangerPoint = enemy[0]
+
+                direction = enemy[1]
+
+                self.addPenalty(costMap, dangerPoint, direction, 300)
+
+            # add enemies warning penalty
+            for enemy in enemies:
+                dangerPoint = enemy[0].move(enemy[0].width, enemy[0].height)
+                # check the bound of map
+                if self.isOutOfBound(dangerPoint.top) or self.isOutOfBound(dangerPoint.left):
+                    dangerPoint = enemy[0]
+
+                dangerPoint.width *= 3
+                dangerPoint.height *= 3
+
+                direction = enemy[1]
+
+                self.addPenalty(costMap, dangerPoint, direction, 100)
                 
+
+            # refresh cost of enemy
             topPixel = enemyTank[0].top
             leftPixel = enemyTank[0].left
             for vOffset in xrange(0, enemyTank[0].height):
                 for hOffset in xrange(0, enemyTank[0].width):
-                    costMap[topPixel + vOffset, leftPixel + hOffset] = self.heuristicDistance(index, enemyPosition) 
+
+                    # check out of bound
+                    xIndex = leftPixel + hOffset if (leftPixel + hOffset) < 416 else 415
+                    yIndex = topPixel + vOffset if topPixel + vOffset < 416 else 415
+
+                    costMap[yIndex, xIndex] = self.heuristicDistance(index, enemyPosition) 
 
 
 
@@ -198,7 +205,7 @@ class ai_agent():
             self_direction = selfInfo[1]
 
             castle = [192, 384, 32, 32]
-            if self_y > 345 and ((self_direction == 1 and self_x < 148) or (self_direction == 3 and self_x > 250)):
+            if self_y > 320 and ((self_direction == 1 and self_x < 148) or (self_direction == 3 and self_x > 250)):
             # if self_y > 345:
                 print 'not Shoot'
                 return 0
@@ -467,16 +474,15 @@ class ai_agent():
             costMap = costMap.copy()
 
             # get next step to be start Rect if available
-            startDirectionCost = allDirectionCost = self.getAllDirectionCost(startInfo[0], costMap, 8)
+            startDirectionCost = self.getAllDirectionCost(startInfo[0], costMap, 8)
             startRect = startInfo[0] if startDirectionCost[startInfo[1]] > 9000 else self.getNextStep(startInfo[0], startInfo[1], 8)
             # check the position of Rect is not out of bound
             startRect.top = self.getValidValue(startRect.top)
             startRect.left = self.getValidValue(startRect.left)
 
-            print startRect
-
-            print 'enemy-------------------'
-            print enemyRect
+            # print startRect
+            # print 'enemy-------------------'
+            # print enemyRect
 
             # initialize the heap
             openSet = []
@@ -492,10 +498,10 @@ class ai_agent():
                 closedSet.append(currNode)
 
                 currDistance = self.heuristicDistance([currNode.rect.top, currNode.rect.left], [enemyRect.top, enemyRect.left])
-                step = 16 if self.heuristicDistance([currNode.rect.top, currNode.rect.left], [enemyRect.top, enemyRect.left]) > 64 else 1
+                step = 8 if self.heuristicDistance([currNode.rect.top, currNode.rect.left], [enemyRect.top, enemyRect.left]) > 32 else 1
 
                 # return path if reach the goal
-                if currDistance < 64:
+                if currDistance < 32:
                     direction = self.getNextDirection(currNode, costMap)
                     print 'direction: ' + str(direction)
                     return direction
@@ -508,7 +514,7 @@ class ai_agent():
                     nextNode = Node(self.getNextStep(currNode.rect, index, step), cost)
 
                     # ignore danger path
-                    if cost > 5000:
+                    if cost > 8000:
                         continue
 
                     # ignore closed node
